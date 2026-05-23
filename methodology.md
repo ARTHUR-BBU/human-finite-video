@@ -24,9 +24,13 @@ metadata:
 - 用户提到"纪录片感""手持感""真人感"但又说不清到底缺什么
 - 用户在做AI视频内容创作（X/YouTube）需要这个方法论框架
 - **用户拿来一个已有的视频Prompt，想升级成带人味的版本**
-- **用户拿来一段影视脚本/剧本/分镜描述，想改编成人类有限视频版本**
+- **用户提供了一段影视脚本/剧本片段，想改编成人类有限视频版本**
 - **用户说"帮我把这个Prompt改得更有纪录片感/更真/更像人拍的"**
 - **用户有剧本场景描述，想转成AI视频生成用的Prompt**
+- **用户要生成AI视频的关键帧/参考图（seed image），需要带人味的图片Prompt**
+- **用户有一张已有的关键帧图/Prompt，想修复成更像人拍的效果**
+- **用户在做AI视频工作流（先用图生视频），想让起始帧就具备有限性**
+- **用户说"帮我调一下这张参考图/关键帧"**
 
 ## 三种工作模式
 
@@ -37,6 +41,7 @@ metadata:
 | **A. 从零生成** | 用户描述一个场景/概念，没有现成素材 | 完整的人类有限视频Prompt |
 | **B. 改编已有Prompt** | 用户提供了一个已有的AI视频Prompt | 升级版Prompt（注入有限性+观察者） |
 | **C. 改编脚本/剧本** | 用户提供影视脚本、剧本片段、分镜描述、场景描写 | 转译为AI视频Prompt（注入有限性+观察者+镜头语言）|
+| **D. 关键帧（图）** | 用户要生成或修复AI视频用的关键帧/参考图Prompt | 带有限性痕迹的图片Prompt（作为视频的种子帧）|
 
 ## 核心公式
 
@@ -360,6 +365,240 @@ Who is behind the camera?
 - 背景人物的自运行就是最好的世界污染
 - 镜头被人群限制→只能从缝隙中拍→这就是有限性
 
+## Mode D：关键帧（图）Prompt构建与修复
+
+AI视频工作流通常是：先生成关键帧图片（seed image / reference frame），再用图生视频（img2vid）。如果起始帧就是"无限电影"风格，后面视频怎么加人味都打折扣。**有限性必须从种子帧就开始注入。**
+
+### 关键帧 vs 视频Prompt的区别
+
+| 维度 | 视频Prompt | 关键帧Prompt |
+|------|-----------|-------------|
+| 时间性 | 有Timeline，可以表现延迟/留白 | 只有单帧，延迟和留白要用"痕迹"暗示 |
+| 运动暗示 | 可以写镜头运动 | 通过模糊/残影/对焦状态暗示"刚动过"或"正在动" |
+| 犹豫表现 | 镜头overshoot+correction | 通过不完全居中的构图、轻微倾斜暗示 |
+| 被污染 | 世界在后续帧自运行 | 单帧内必须有污染元素存在 |
+| 留白 | 沉默时间 | 构图里的负空间、未完成的眼神、没关上的门 |
+
+### Step D1：判断是生成还是修复
+
+```
+用户输入判断：
+- "帮我生成一个关键帧" / "我要一张参考图" → Mode D-Generate
+- "帮我改一下这个关键帧" / "这张图太假了" / 用户给了一个图片Prompt → Mode D-Fix
+```
+
+### Step D2：关键帧五维注入
+
+五维有限性在单帧图片中的具体表现：
+
+#### 1. 不完美 — 图片版
+
+```
+必须包含的视觉元素：
+- 皮肤：毛孔、细纹、不对称、疲态、出油、干裂（不是磨皮后的塑料）
+- 光线：轻微过曝区域、色温不均匀、窗影、灯影
+- 环境：桌面杂物、没对齐的物品、使用痕迹、水渍、灰尘
+- 镜头：轻微色散、边缘暗角、不是完美锐利、景深过渡自然
+
+Prompt关键词：
+`natural skin texture with visible pores`, `uneven lighting from window`, 
+`slight chromatic aberration at edges`, `lens vignetting`, 
+`lived-in environment with daily clutter`, `water ring on table`
+
+绝对禁止：
+`flawless skin`, `perfect lighting`, `pristine`, `studio quality`, 
+`professional color grading`, `airbrushed`
+```
+
+#### 2. 延迟 — 图片版（用痕迹暗示时间）
+
+```
+延迟在单帧中表现为"动作正在发生但还没完成"：
+- 人物：眼神比身体慢半拍（身体已经转向但眼睛还留在原处）
+- 手部：动作中间态（手正在放下杯子但还没完全放下）
+- 表情：情绪正在到达但还没到位（嘴角开始动但笑还没完成）
+- 对焦：正在从A点到B点的过程中（前一个焦点在虚，新焦点还没实）
+
+Prompt关键词：
+`mid-action freeze`, `expression in transition`, `gaze not yet aligned with body`, 
+`focus mid-pull between foreground and subject`, `reaction still arriving`
+```
+
+#### 3. 犹豫 — 图片版（用构图暗示判断过程）
+
+```
+犹豫在单帧中表现为"构图不是一步到位"：
+- 主体不在画面中心（偏左或偏右，像摄影师在犹豫要不要居中）
+- 轻微倾斜（不是故意 Dutch angle，是手持的自然歪斜1-3度）
+- 部分裁切（头顶或下巴被裁掉一点，像"还没来得及调好"）
+- 注意力锚点不明确（画面里有多个看点，没有明确的视觉引导线）
+
+Prompt关键词：
+`slightly off-center composition`, `natural handheld tilt of 2 degrees`, 
+`subject partially cropped at frame edge`, `unresolved framing`, 
+`multiple attention points competing in frame`
+```
+
+#### 4. 被污染 — 图片版（单帧内的世界存在）
+
+```
+被污染在单帧中表现为"世界在这个瞬间仍然在运行"：
+- 窗外：有东西在发生（车、人、鸟、云）
+- 前景：有遮挡物（肩膀、门框、植物、别人的手）
+- 反射面：玻璃/镜子/桌面反射出画面外的东西
+- 环境痕迹：空调出风口的飘带、被风吹动的纸、不完全静止的物体
+
+Prompt关键词：
+`reflection in glass showing activity outside frame`, 
+`foreground shoulder partially blocking view`, 
+`wind-blown paper on desk`, `passing car reflection in window`, 
+`environment continuing its own rhythm`
+```
+
+#### 5. 留白 — 图片版（未完成的情绪）
+
+```
+留白在单帧中表现为"情绪没有被完整表达"：
+- 眼神：看向画面外（没看镜头也没看画面内的任何东西，在看"别处"）
+- 表情：介于两种情绪之间（不是笑也不是不笑，正在从一种过渡到另一种）
+- 空间：画面里有大量"没用"的空间（空的椅子、没关的门、空走廊）
+- 沉默感：画面让人感觉"声音刚消失"或"声音还没开始"
+
+Prompt关键词：
+`gaze directed outside frame`, `expression suspended between emotions`, 
+`empty space that suggests absence`, `the silence after a sentence`, 
+`door left slightly ajar`, `unread letter on the table`
+```
+
+### Step D3：关键帧Prompt模板
+
+#### 模板D-1：人物关键帧
+
+```
+A photographic still frame from [视频类型]. Not a portrait. Not a headshot.
+Shot by a [观察者身份] with [设备类型].
+
+OBSERVER PRESENCE:
+- Camera position: [物理位置，暗示受限]
+- Framing: [slightly off-center / partial crop / natural handheld feel]
+- Focus state: [mid-pull / settled on X after hesitating / breathing]
+
+SUBJECT:
+[人物描述 — 保留真实皮肤纹理、不对称、疲态、衣服的自然褶皱和穿戴痕迹]
+
+MOMENT IN TIME:
+[动作中间态] — not before, not after, but during.
+Expression is [in transition / suspended / still arriving].
+Gaze is [directed slightly away / caught mid-shift / focused on something outside frame].
+
+ENVIRONMENT AS WITNESS:
+- [污染元素1: 窗外反射/前景遮挡/环境痕迹]
+- [污染元素2: 桌面杂物/没整理的物品/使用痕迹]
+- [污染元素3: 不完美的光线/色温不均/过曝区域]
+
+TECHNICAL REALITY:
+Natural [light source] with [缺陷: overexposure / uneven color temp / shadow cast].
+Lens shows [vignetting / slight softness at edges / chromatic aberration].
+No retouching. No studio lighting. No color grade.
+This is a frame that was captured, not composed.
+
+NEGATIVE: No perfect skin. No studio quality. No cinematic grading. 
+No pristine environment. No centered subject. No sharp throughout.
+No posed expression. No controlled lighting.
+
+GOAL: A frame that feels like it was pulled from real footage — 
+not a photograph that was taken, but a moment that was caught.
+```
+
+#### 模板D-2：场景/空镜关键帧
+
+```
+A photographic establishing frame from [视频类型]. Not a real estate photo.
+Shot by a [观察者身份] positioned [受限位置].
+
+OBSIVER PRESENCE:
+- The camera is [物理限制: squeezed in corner / through a doorway / partially blocked by furniture]
+- The frame includes [intrusion: edge of a coat / someone's shoulder / a plant leaf]
+- Composition is [slightly tilted / off-balance / searching]
+
+SCENE:
+[场景描述 — 强调使用痕迹和生活感，不是样板间]
+
+LIVING WORLD:
+- [世界自运行元素1: 水杯里的水有涟漪/纸被吹动/窗帘在动]
+- [世界自运行元素2: 窗外有模糊的活动/灯光有微小变化]
+- [时间痕迹: 灰尘在光柱里/使用过的物品/没关上的抽屉]
+
+LIGHTING:
+Natural [light source]. [自然缺陷]. Not set up.
+The light falls where it falls. Shadows exist where they shouldn't for a "good" photo.
+There's a [hot spot / dark corner / flare] that a DP would eliminate but a real person couldn't.
+
+TECHNICAL REALITY:
+[设备特征: phone camera grain / DSLR noise at high ISO / slight motion blur].
+Depth of field is [imperfect / focusing on the "wrong" thing first].
+The frame has the energy of being there, not the perfection of being staged.
+
+NEGATIVE: No architectural photography. No perfect symmetry. No clean surfaces.
+No HDR. No studio lighting. No staged minimalism. No real estate aesthetic.
+
+GOAL: A frame that feels like someone walked into this space, 
+raised their camera, and pressed the shutter before they had time to compose.
+```
+
+### Step D4：关键帧修复流程（Mode D-Fix）
+
+当用户拿来一个已有的关键帧Prompt要修复：
+
+```
+修复检查清单：
+□ 有没有"perfect/flawless/pristine"等无限词？→ 删除替换
+□ 皮肤是不是太干净？→ 加真实纹理描述
+□ 光线是不是太完美？→ 加过曝/不均匀/自然缺陷
+□ 构图是不是太居中/太平衡？→ 加偏移/裁切/倾斜
+□ 前景有没有遮挡？→ 没有就加
+□ 背景有没有世界存在的证据？→ 没有就加
+□ 人物表情是不是"完成态"？→ 改为"过渡态"
+□ 对焦是不是全程锐利？→ 加对焦犹豫/中间态
+□ 有没有使用痕迹/杂乱？→ 没有=样板间，必须加
+□ 整体是不是像"摄影作品"？→ 降级为"视频截帧"感
+```
+
+修复输出格式：
+```
+--- 原始关键帧Prompt ---
+[用户提供的]
+
+--- 诊断 ---
+[发现了什么无限电影痕迹]
+
+--- 修复版Prompt ---
+[注入有限性后的版本]
+
+--- 修复说明 ---
+[逐条列出改了什么]
+```
+
+### 关键帧与视频的衔接原则
+
+关键帧是视频的种子——它决定了视频生成的起点。衔接原则：
+
+```
+1. 关键帧里已有的有限性元素，视频Prompt必须继承并延续
+   - 关键帧有过曝区域 → 视频里光线要有波动
+   - 关键帧有前景遮挡 → 视频里遮挡要继续存在（甚至轻微移动）
+   - 关键帧人物表情在过渡 → 视频里让这个过渡完成
+
+2. 关键帧暗示的观察者，视频Prompt必须保持一致
+   - 关键帧是手机拍的 → 视频也是手机视角
+   - 关键帧有倾斜 → 视频开头保持倾斜，可以慢慢修正（观察者在调整）
+
+3. 关键帧留的"白"，视频要去填（但要慢慢填）
+   - 关键帧眼神看向画面外 → 视频里让视线慢慢回来
+   - 关键帧门没关 → 视频里门可以被风吹动或有人经过
+   - 关键帧情绪在两种之间 → 视频里让它落到其中一种
+```
+
 ## Prompt模板
 
 ### 人类有限视频版模板
@@ -478,3 +717,5 @@ Limits: 距离远画质差，手臂会酸，旁边人一直在动
 - `01-AI技术/AI-Video/人类有限视频——不是AI无限电影.md` — 概念宣言
 - `01-AI技术/AI-Agent/权重系统与中间层架构.md` — 同源理论
 - `01-AI技术/场论工程——从铁轨思维到场域引导.md` — 场论哲学根基
+
+完整溯源见 `references/source-materials-and-outputs.md`。
